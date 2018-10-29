@@ -97,16 +97,19 @@ bool readController(){
 
   uint8_t maxspeed;
 
+  Serial.println(packetbuffer[0]);
+
  // Buttons
   if (packetbuffer[1] == 'B') {
 
     uint8_t buttnum = packetbuffer[2] - '0';
     boolean pressed = packetbuffer[3] - '0';
 
+    Serial.println(buttnum);
+    
     if (pressed) {
 
-      Serial.println(buttnum);
-
+     
       if(buttnum == 4){
         
       }
