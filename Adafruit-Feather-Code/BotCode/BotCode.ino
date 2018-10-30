@@ -10,18 +10,14 @@
 
 // Connect Vin to 3V DC
 // Connect GND to ground
-// Connect SCL to I2C clock pin 
+// Connect SCL to I2C clock pin
 // Connect SDA to I2C data pin
 
-// Create the temp/humidity sensor object
-
-
-
 // Create the motor shield object with the default I2C address
-Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
+Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
 // And connect 2 DC motors to port M3 & M4 !
-Adafruit_DCMotor *L_MOTOR = AFMS.getMotor(3);
+Adafruit_DCMotor *L_MOTOR = AFMS.getMotor(2);
 Adafruit_DCMotor *R_MOTOR = AFMS.getMotor(4);
 
 //Name your RC here
@@ -70,105 +66,114 @@ void setup(void) {
 
   R_MOTOR->setSpeed(0);
   R_MOTOR->run(RELEASE);
-    
+
   Serial.begin(115200);
   Serial.println(F("Adafruit Bluefruit Robot Controller Example"));
   Serial.println(F("-----------------------------------------"));
 
   /* Initialize the module */
   BLEsetup();
+
 }
 
 void loop(void)
 {
-  // read new packet data
   uint8_t len = readPacket(&ble, BLE_READPACKET_TIMEOUT);
 
   readController();
-
-  //for the plotter
 }
 
+long calculatedSpeed(float spd) {
+  return (spd / 10) * 255;
+}
 
 bool isMoving = false;
 unsigned long lastPress = 0;
 
-bool readController(){
+bool readController() {
 
   uint8_t maxspeed;
 
-  Serial.println(packetbuffer[0]);
 
- // Buttons
-  if (packetbuffer[1] == 'B') {
 
-    uint8_t buttnum = packetbuffer[2] - '0';
-    boolean pressed = packetbuffer[3] - '0';
+  if (packetbuffer[0]) {
 
-    Serial.println(buttnum);
-    
-    if (pressed) {
+    String leftRight = "L";
 
-     
-      if(buttnum == 4){
-        
-      }
-
-      if(buttnum == 5){
-        isMoving = true;
-        L_MOTOR->run(FORWARD);
-        R_MOTOR->run(FORWARD);
-        maxspeed = ForwardSpeed;
-        ble.println("Forward");
-      }
-      
-      if(buttnum == 6){
-        isMoving = true;
-        L_MOTOR->run(BACKWARD);
-        R_MOTOR->run(BACKWARD);
-        maxspeed = ReverseSpeed;
-        ble.println("Backward");        
-      }
-      
-      if(buttnum == 7){
-        isMoving = true;
-        L_MOTOR->run(RELEASE);
-        R_MOTOR->run(FORWARD);
-        maxspeed = TurningSpeed;
-        ble.println("Left");
-      }
-      
-      if(buttnum == 8){
-        isMoving = true;
-        L_MOTOR->run(FORWARD);
-        R_MOTOR->run(RELEASE);
-        maxspeed = TurningSpeed;
-        ble.println("Right");        
-      }
-
-      lastPress = millis();
-
-      // speed up the motors
-      for (int speed=0; speed < maxspeed; speed+=5) {
-        L_MOTOR->setSpeed(speed);
-        R_MOTOR->setSpeed(speed);
-        delay(5); // 250ms total to speed up
-      }
-  } else {
-      isMoving = false;
-      // slow down the motors
-      for (int speed = maxspeed; speed >= 0; speed-=5) {
-        L_MOTOR->setSpeed(speed);
-        R_MOTOR->setSpeed(speed);
-        delay(5); // 50ms total to slow down
-      }
-      L_MOTOR->run(RELEASE);
-      R_MOTOR->run(RELEASE);
+    if (packetbuffer[0] == 82) {
+      leftRight = "R";
     }
-}
+
+    int negPos = packetbuffer[1] - 48;
+    int spd = packetbuffer[2] - 48;
+
+    if (spd == 29) {
+      spd = 10;
+    }
+
+    spd = calculatedSpeed(spd);
+
+    Serial.println(leftRight);
+
+    Serial.println(negPos);
+
+    Serial.println(spd);
+    Serial.println(" ");
+
+
+    if (leftRight == "L") {
+      if (spd == 0) {
+        L_MOTOR->run(RELEASE);
+      }
+      else {
+        L_MOTOR->setSpeed(spd);
+        if (negPos == 1) {
+          L_MOTOR->run(FORWARD);
+        }
+        else {
+          L_MOTOR->run(BACKWARD);
+        }
+      }
+    }
+    else {
+      if (spd == 0) {
+        R_MOTOR->run(RELEASE);
+      }
+      else {
+        R_MOTOR->setSpeed(spd);
+        if (negPos == 1) {
+          R_MOTOR->run(FORWARD);
+        }
+        else {
+          R_MOTOR->run(BACKWARD);
+        }
+      }
+    }
+
+    //        lastPress = millis();
+    //
+    //           // speed up the motors
+    //      for (int speed=0; speed < maxspeed; speed+=5) {
+    //        L_MOTOR->setSpeed(speed);
+    //        R_MOTOR->setSpeed(speed);
+    //        delay(5); // 250ms total to speed up
+    //      }
+    //
+    //      isMoving = false;
+    //      // slow down the motors
+    //      for (int speed = maxspeed; speed >= 0; speed-=5) {
+    //        L_MOTOR->setSpeed(speed);
+    //        R_MOTOR->setSpeed(speed);
+    //        delay(5); // 50ms total to slow down
+    //      }
+    //      L_MOTOR->run(RELEASE);
+    //      R_MOTOR->run(RELEASE);
+
+
+  }
 }
 
-void BLEsetup(){
+void BLEsetup() {
   Serial.print(F("Initialising the Bluefruit LE module: "));
 
   if ( !ble.begin(VERBOSE_MODE) )
@@ -179,21 +184,21 @@ void BLEsetup(){
 
   /* Perform a factory reset to make sure everything is in a known state */
   Serial.println(F("Performing a factory reset: "));
-  if (! ble.factoryReset() ){
-       error(F("Couldn't factory reset"));
+  if (! ble.factoryReset() ) {
+    error(F("Couldn't factory reset"));
   }
 
   //Convert the name change command to a char array
   BROADCAST_CMD.toCharArray(buf, 60);
 
   //Change the broadcast device name here!
-  if(ble.sendCommandCheckOK(buf)){
+  if (ble.sendCommandCheckOK(buf)) {
     Serial.println("name changed");
   }
   delay(250);
 
   //reset to take effect
-  if(ble.sendCommandCheckOK("ATZ")){
+  if (ble.sendCommandCheckOK("ATZ")) {
     Serial.println("resetting");
   }
   delay(250);
@@ -216,7 +221,7 @@ void BLEsetup(){
 
   /* Wait for connection */
   while (! ble.isConnected()) {
-      delay(500);
+    delay(500);
   }
 
   Serial.println(F("*****************"));

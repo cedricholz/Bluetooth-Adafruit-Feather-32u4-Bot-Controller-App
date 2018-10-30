@@ -97,7 +97,7 @@ uint8_t readPacket(Adafruit_BLE *ble, uint16_t timeout)
     }
     
     if (timeout == 0) break;
-    delay(1);
+//    delay(1);
   }
 
   packetbuffer[replyidx] = 0;  // null term
@@ -127,4 +127,3 @@ uint8_t readPacket(Adafruit_BLE *ble, uint16_t timeout)
   // checksum passed!
   return replyidx;
 }
-

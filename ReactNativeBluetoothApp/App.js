@@ -7,18 +7,12 @@
  */
 
 import React, {Component} from 'react';
-import {PermissionsAndroid, Platform, StyleSheet, View, Button} from 'react-native';
+import {PermissionsAndroid, StyleSheet, View} from 'react-native';
 import {BleManager} from "react-native-ble-plx";
-import {arrowImages} from "./src/constants";
+import {arrowImages, base64Values} from "./src/constants";
 import JoystickComponent from "./src/components/JoystickComponent";
 import {getArrowDirection} from "./src/utils";
 
-const instructions = Platform.select({
-    ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
-    android:
-        'Double tap R on your keyboard to reload,\n' +
-        'Shake or press menu button for dev menu',
-});
 
 type Props = {};
 
@@ -39,42 +33,119 @@ export async function requestLocationPermission() {
 
 export default class App extends Component<Props> {
 
-    setRightDrivingState = (newState) => {
-        this.setState({
-            rightDrivingState: newState,
-        })
-    };
-    setLeftDrivingState = (newState) => {
-        this.setState({
-            leftDrivingState: newState,
-        })
+
+    setDrivingState = (newState, leftOrRight) => {
+        if (leftOrRight === 'L') {
+            this.setState({
+                leftDrivingState: newState,
+            })
+        }
+        else {
+            this.setState({
+                rightDrivingState: newState,
+            })
+        }
     };
 
-    writeData = () => {
-        const {deviceInfo} = this.state;
-        this.manager.writeCharacteristicWithoutResponseForDevice(
-            deviceInfo.deviceID,
-            deviceInfo.serviceUUID,
-            deviceInfo.uuid,
-            'QQ==')
-            .then((data) => {
-                console.log("WROTE THE DATA", data.value)
-            })
-    }
+    setDrivingSpeed = (newSpeed, positiveNegative, leftOrRight) => {
+        if (leftOrRight === 'L') {
+
+            this.leftDrivingspeed = newSpeed;
+
+        }
+
+        else {
+            this.rightDrivingSpeed = newSpeed;
+        }
+
+        this.writeData(newSpeed, positiveNegative, leftOrRight)
+    };
+
+
+    writeData = (newSpeed, positiveNegative, leftOrRight) => {
+
+        const {deviceInfo, leftDrivingState, rightDrivingState, connected} = this.state;
+
+        if (connected) {
+
+
+            let drivingState = leftDrivingState;
+
+            if (leftOrRight === 'right') {
+                drivingState = rightDrivingState;
+            }
+
+            let data;
+            let command = '000';
+
+            if(newSpeed === '0'){
+                command = leftOrRight + '00';
+            }
+            else if (positiveNegative === 'P'){
+                command = leftOrRight + '1' + newSpeed;
+            }
+
+            else{
+                command = leftOrRight + '0' + newSpeed;
+            }
+
+            console.log("command", command);
+            console.log("New Speed", newSpeed)
+
+            this.base64Command = base64Values[command];
+        }
+    };
+
 
     constructor(props) {
         super(props);
         this.manager = new BleManager();
-        this.state = {deviceInfo: {}, rightDrivingState: 'N', leftDrivingState: 'N'}
+
+        this.leftDrivingspeed = '0';
+        this.rightDrivingSpeed = '0';
+        this.base64Command = '';
+
+        this.state = {
+            deviceInfo: {},
+            rightDrivingState: 'N',
+            leftDrivingState: 'N',
+            connected: false,
+        }
     }
 
     async componentWillMount() {
         await requestLocationPermission();
     }
 
+    componentWillUnmount(){
+        const {intervalId} = this.state;
+        clearInterval(intervalId);
+    }
+
+    timer = () =>{
+        const {deviceInfo} = this.state;
+
+      if (this.base64Command){
+          this.manager.writeCharacteristicWithoutResponseForDevice(
+              deviceInfo.deviceID,
+              deviceInfo.serviceUUID,
+              deviceInfo.uuid,
+              this.base64Command)
+              .then((data) => {
+                  console.log("Data Sent Successfully", data.value);
+              })
+              .catch((error) =>{
+                  console.log("ERROR", error);
+              })
+
+          this.base64Command = '';
+      }
+
+    };
 
     componentDidMount() {
 
+        this.intervalId = setInterval(this.timer.bind(this), 500);
 
         this.manager.onStateChange(newState => {
             if (newState !== "PoweredOn") return;
@@ -89,13 +160,8 @@ export default class App extends Component<Props> {
                         console.log("SCAN ERROR", error);
                         return;
                     }
-
                     console.log("Device: " + device.name);
-
-
                     if (device.name === 'TankBot') {
-                        console.log("GOT THE TANK BOT");
-
                         this.manager.stopDeviceScan();
 
                         device.connect()
@@ -105,22 +171,17 @@ export default class App extends Component<Props> {
                             .then((device) => {
                                 device.services()
                                     .then((services) => {
-                                        let service_idx = 2;
-                                        // console.log("SERVICEESS", services[0])
-                                        console.log("GOT THE SERVICES")
                                         return device.characteristicsForService(services[4].uuid)
                                     })
                                     .then((characteristics) => {
-
-                                        console.log("GOT THE CHARACTERISTICS")
 
                                         for (let i in characteristics) {
 
                                             if (characteristics[i].isWritableWithoutResponse === true) {
 
-                                                console.log("THERESHEBLOWS")
+                                                console.log("CONNECTED")
 
-                                                this.setState({deviceInfo: characteristics[i]})
+                                                this.setState({deviceInfo: characteristics[i], connected: true})
 
                                             }
                                         }
@@ -137,49 +198,50 @@ export default class App extends Component<Props> {
     }
 
     render() {
-        const {deviceInfo, leftDrivingState, rightDrivingState} = this.state;
+        const {
+            deviceInfo,
+            leftDrivingState,
+            rightDrivingState,
+            connected
+        } = this.state;
 
-        const connecting = Object.keys(deviceInfo).length === 0;
+        // const connecting = Object.keys(deviceInfo).length === 0;
 
         let arrowDirection = getArrowDirection(leftDrivingState, rightDrivingState);
 
         return (
             <View>
+                {<View style={styles.dot}>
+                    {!connected ? arrowImages['offDot'] : arrowImages['onDot']}
+                </View>}
+
                 {arrowDirection !== '' && <View style={styles.arrowImage}>
                     {arrowImages[arrowDirection]}
                 </View>}
 
                 <JoystickComponent
-                    rightDrivingState={rightDrivingState}
-                    setRightDrivingState={this.setRightDrivingState}
                     leftDrivingState={leftDrivingState}
-                    setLeftDrivingState={this.setLeftDrivingState}
+                    rightDrivingState={rightDrivingState}
+                    setDrivingState={this.setDrivingState}
+
+                    leftDrivingSpeed={this.leftDrivingspeed}
+                    rightDrivingSpeed={this.rightDrivingSpeed}
+                    setDrivingSpeed={this.setDrivingSpeed}
                 />
-                {!connecting && <Button title={'Send'} onPress={() => this.writeData()}/>}
+                {/*{!connecting && <Button title={'Send'} onPress={() => this.writeData()}/>}*/}
             </View>
 
-    )
-        ;
+        )
+            ;
     }
 }
 
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#F5FCFF',
-    },
-    welcome: {
-        fontSize: 20,
-        textAlign: 'center',
-        margin: 10,
-    },
-    instructions: {
-        textAlign: 'center',
-        color: '#333333',
-        marginBottom: 5,
+    dot: {
+        position: 'absolute',
+        right: 10,
+        top: 10
     },
 
     arrowImage: {

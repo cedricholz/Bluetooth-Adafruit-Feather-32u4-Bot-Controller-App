@@ -10,6 +10,7 @@
     "joystick-component-lib": "^0.1.2",
     "react": "16.6.0-alpha.8af6728",
     "react-native": "0.57.4",
+    "react-native-base64": "0.0.2",
     "react-native-ble-plx": "^1.0.0"
   },
   "devDependencies": {
