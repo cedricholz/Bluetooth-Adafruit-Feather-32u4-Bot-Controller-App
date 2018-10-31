@@ -2,8 +2,6 @@ import React from 'React';
 import {JoystickDemuxed, TouchEventDemuxer} from 'joystick-component-lib';
 import {StyleSheet} from 'react-native';
 
-import base64 from 'react-native-base64'
-
 const componentArray = [JoystickDemuxed, JoystickDemuxed];
 let DoubleJoystick = TouchEventDemuxer(componentArray);
 
@@ -12,14 +10,13 @@ export default class JoystickComponent extends React.Component {
 
     leftStickChangedHandler = (xProp, yProp) => {
 
-        const { leftDrivingState, leftDrivingSpeed } = this.props;
-        // console.log(`First joystick: ${xProp}, ${yProp} State ${leftDrivingState}`);
+        const {leftDrivingState, leftDrivingSpeed} = this.props;
 
         this.stickChangedHandler(xProp, yProp, leftDrivingState, leftDrivingSpeed, 'L')
 
     };
 
-    stickChangedHandler = (xProp, yProp, drivingState, drivingSpeed, leftOrRight) =>{
+    stickChangedHandler = (xProp, yProp, drivingState, drivingSpeed, leftOrRight) => {
 
         const {setDrivingState, setDrivingSpeed} = this.props;
 
@@ -37,16 +34,16 @@ export default class JoystickComponent extends React.Component {
             newDrivingSpeed = 'M';
         }
 
-        else if (s === '0'){
+        else if (s === '0') {
             newDrivingSpeed = '0';
         }
 
-        else{
+        else {
             newDrivingSpeed = s.charAt(negativeModifier + 2);
         }
 
         let positiveNegative = 'P';
-        if (s.charAt(0) === '-'){
+        if (s.charAt(0) === '-') {
             positiveNegative = 'N';
         }
 
@@ -76,7 +73,6 @@ export default class JoystickComponent extends React.Component {
     rightStickChangedHandler = (xProp, yProp) => {
         const {rightDrivingState, rightDrivingSpeed} = this.props;
 
-        // console.log(`Second joystick: ${xProp}, ${yProp} State ${rightDrivingState}`);
 
         this.stickChangedHandler(xProp, yProp, rightDrivingState, rightDrivingSpeed, 'R')
 
@@ -85,13 +81,16 @@ export default class JoystickComponent extends React.Component {
 
     render() {
 
+        const joystickLength = 100;
+        const xPoint = 150;
+
         return (
             <DoubleJoystick
                 childrenProps={[
                     {
-                        neutralPointX: 150,
+                        neutralPointX: xPoint,
                         neutralPointY: 110,
-                        length: 70,
+                        length: joystickLength,
                         shape: 'horizontal',
                         isSticky: true,
                         onJoystickMove: this.leftStickChangedHandler,
@@ -99,9 +98,9 @@ export default class JoystickComponent extends React.Component {
                         backgroundStyle: styles.backgroundStyle,
                     },
                     {
-                        neutralPointX: 150,
+                        neutralPointX: xPoint,
                         neutralPointY: 550,
-                        length: 70,
+                        length: joystickLength,
                         shape: 'horizontal',
                         isSticky: true,
                         onJoystickMove: this.rightStickChangedHandler,

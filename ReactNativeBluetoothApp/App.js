@@ -64,28 +64,27 @@ export default class App extends Component<Props> {
 
     writeData = (newSpeed, positiveNegative, leftOrRight) => {
 
-        const {deviceInfo, leftDrivingState, rightDrivingState, connected} = this.state;
+        const {connected} = this.state;
 
         if (connected) {
 
-            let data;
             let command = '';
 
-            if(newSpeed === '0'){
+            if (newSpeed === '0') {
                 command = '00';
             }
-            else if (positiveNegative === 'P'){
+            else if (positiveNegative === 'P') {
                 command = '1' + newSpeed;
             }
 
-            else{
+            else {
                 command = '0' + newSpeed;
             }
 
-            if (leftOrRight === 'L'){
+            if (leftOrRight === 'L') {
                 this.leftCommand = command;
             }
-            else{
+            else {
                 this.rightCommand = command;
             }
 
@@ -117,28 +116,28 @@ export default class App extends Component<Props> {
         await requestLocationPermission();
     }
 
-    componentWillUnmount(){
+    componentWillUnmount() {
         const {intervalId} = this.state;
         clearInterval(intervalId);
     }
 
-    timer = () =>{
+    timer = () => {
         const {deviceInfo} = this.state;
 
         let fullCommand = '';
-        if(this.leftCommand){
-            if (this.rightCommand){
+        if (this.leftCommand) {
+            if (this.rightCommand) {
                 fullCommand = this.leftCommand + this.rightCommand;
             }
-            else{
+            else {
                 fullCommand = this.leftCommand + 'XX'
             }
         }
-        else if (this.rightCommand){
+        else if (this.rightCommand) {
             fullCommand = 'XX' + this.rightCommand;
         }
 
-        if (fullCommand){
+        if (fullCommand) {
 
             const base64Command = base64.encode(fullCommand);
 
@@ -152,7 +151,7 @@ export default class App extends Component<Props> {
                 .then((data) => {
                     console.log("Data Sent Successfully", data.value);
                 })
-                .catch((error) =>{
+                .catch((error) => {
                     console.log("ERROR", error);
                 });
 
