@@ -57,22 +57,3 @@ arrowImages['up'] = up;
 arrowImages['down'] = down;
 arrowImages['defaultImage'] = defaultImage;
 
-
-// LeftOrRight + PositiveNegative + Speed
-// Negative is 0, Positive is 1
-// M is 10, for maximum
-export const base64Values = {};
-const nums = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'M'];
-
-for (let leftRight of ['L', 'R']){
-    for(let negPos of [0, 1]){
-        for (let n of nums){
-            base64Values[leftRight + negPos + n] = base64.encode(leftRight + negPos + n)
-        }
-    }
-
-    base64Values['L00'] = base64.encode('L00');
-    base64Values['R00'] = base64.encode('R00');
-}
-
-

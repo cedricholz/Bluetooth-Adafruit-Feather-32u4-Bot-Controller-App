@@ -8,19 +8,11 @@
 
 #include <Wire.h>
 
-// Connect Vin to 3V DC
-// Connect GND to ground
-// Connect SCL to I2C clock pin
-// Connect SDA to I2C data pin
-
-// Create the motor shield object with the default I2C address
 Adafruit_MotorShield AFMS = Adafruit_MotorShield();
 
-// And connect 2 DC motors to port M3 & M4 !
-Adafruit_DCMotor *L_MOTOR = AFMS.getMotor(2);
-Adafruit_DCMotor *R_MOTOR = AFMS.getMotor(4);
+Adafruit_DCMotor *L_MOTOR = AFMS.getMotor(4);
+Adafruit_DCMotor *R_MOTOR = AFMS.getMotor(2);
 
-//Name your RC here
 String BROADCAST_NAME = "TankBot";
 
 String BROADCAST_CMD = String("AT+GAPDEVNAME=" + BROADCAST_NAME);
@@ -42,11 +34,6 @@ void printHex(const uint8_t * data, const uint32_t numBytes);
 extern uint8_t packetbuffer[];
 
 char buf[60];
-
-// Set your forward, reverse, and turning speeds
-#define ForwardSpeed                255
-#define ReverseSpeed                255
-#define TurningSpeed                100
 
 
 /**************************************************************************/
@@ -84,6 +71,9 @@ void loop(void)
 }
 
 long calculatedSpeed(float spd) {
+  if (spd == 29){
+    spd = 10;
+  }
   return (spd / 10) * 255;
 }
 
@@ -94,82 +84,45 @@ bool readController() {
 
   uint8_t maxspeed;
 
-
-
   if (packetbuffer[0]) {
 
-    String leftRight = "L";
+    int leftDirection = packetbuffer[0] - 48;
+    int leftSpeed = packetbuffer[1] - 48;
+    int rightDirection = packetbuffer[2] - 48;
+    int rightSpeed = packetbuffer[3] - 48;
 
-    if (packetbuffer[0] == 82) {
-      leftRight = "R";
-    }
-
-    int negPos = packetbuffer[1] - 48;
-    int spd = packetbuffer[2] - 48;
-
-    if (spd == 29) {
-      spd = 10;
-    }
-
-    spd = calculatedSpeed(spd);
-
-    Serial.println(leftRight);
-
-    Serial.println(negPos);
-
-    Serial.println(spd);
-    Serial.println(" ");
-
-
-    if (leftRight == "L") {
-      if (spd == 0) {
-        L_MOTOR->run(RELEASE);
-      }
-      else {
-        L_MOTOR->setSpeed(spd);
-        if (negPos == 1) {
-          L_MOTOR->run(FORWARD);
+    if (leftDirection != 40){
+        leftSpeed = calculatedSpeed(leftSpeed);
+        if (leftSpeed == 0) {
+          L_MOTOR->run(RELEASE);
         }
         else {
-          L_MOTOR->run(BACKWARD);
+          L_MOTOR->setSpeed(leftSpeed);
+          if (leftDirection == 0) {
+            L_MOTOR->run(FORWARD);
+          }
+          else {
+            L_MOTOR->run(BACKWARD);
+          }
         }
-      }
     }
-    else {
-      if (spd == 0) {
-        R_MOTOR->run(RELEASE);
-      }
-      else {
-        R_MOTOR->setSpeed(spd);
-        if (negPos == 1) {
-          R_MOTOR->run(FORWARD);
+
+    if(rightDirection != 40){
+        rightSpeed = calculatedSpeed(rightSpeed);
+        if (rightSpeed == 0) {
+          R_MOTOR->run(RELEASE);
         }
         else {
-          R_MOTOR->run(BACKWARD);
+          R_MOTOR->setSpeed(rightSpeed);
+          if (rightDirection == 0) {
+            R_MOTOR->run(FORWARD);
+          }
+          else {
+            R_MOTOR->run(BACKWARD);
+          }
         }
-      }
     }
-
-    //        lastPress = millis();
-    //
-    //           // speed up the motors
-    //      for (int speed=0; speed < maxspeed; speed+=5) {
-    //        L_MOTOR->setSpeed(speed);
-    //        R_MOTOR->setSpeed(speed);
-    //        delay(5); // 250ms total to speed up
-    //      }
-    //
-    //      isMoving = false;
-    //      // slow down the motors
-    //      for (int speed = maxspeed; speed >= 0; speed-=5) {
-    //        L_MOTOR->setSpeed(speed);
-    //        R_MOTOR->setSpeed(speed);
-    //        delay(5); // 50ms total to slow down
-    //      }
-    //      L_MOTOR->run(RELEASE);
-    //      R_MOTOR->run(RELEASE);
-
-
+   
   }
 }
 

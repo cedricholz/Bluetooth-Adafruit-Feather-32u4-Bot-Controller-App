@@ -2,6 +2,8 @@ import React from 'React';
 import {JoystickDemuxed, TouchEventDemuxer} from 'joystick-component-lib';
 import {StyleSheet} from 'react-native';
 
+import base64 from 'react-native-base64'
+
 const componentArray = [JoystickDemuxed, JoystickDemuxed];
 let DoubleJoystick = TouchEventDemuxer(componentArray);
 

@@ -12,7 +12,7 @@ import {BleManager} from "react-native-ble-plx";
 import {arrowImages, base64Values} from "./src/constants";
 import JoystickComponent from "./src/components/JoystickComponent";
 import {getArrowDirection} from "./src/utils";
-
+import base64 from 'react-native-base64'
 
 type Props = {};
 
@@ -68,31 +68,28 @@ export default class App extends Component<Props> {
 
         if (connected) {
 
-
-            let drivingState = leftDrivingState;
-
-            if (leftOrRight === 'right') {
-                drivingState = rightDrivingState;
-            }
-
             let data;
-            let command = '000';
+            let command = '';
 
             if(newSpeed === '0'){
-                command = leftOrRight + '00';
+                command = '00';
             }
             else if (positiveNegative === 'P'){
-                command = leftOrRight + '1' + newSpeed;
+                command = '1' + newSpeed;
             }
 
             else{
-                command = leftOrRight + '0' + newSpeed;
+                command = '0' + newSpeed;
             }
 
-            console.log("command", command);
-            console.log("New Speed", newSpeed)
+            if (leftOrRight === 'L'){
+                this.leftCommand = command;
+            }
+            else{
+                this.rightCommand = command;
+            }
 
-            this.base64Command = base64Values[command];
+
         }
     };
 
@@ -103,7 +100,10 @@ export default class App extends Component<Props> {
 
         this.leftDrivingspeed = '0';
         this.rightDrivingSpeed = '0';
-        this.base64Command = '';
+
+        this.leftCommand = '';
+        this.rightCommand = '';
+
 
         this.state = {
             deviceInfo: {},
@@ -125,21 +125,41 @@ export default class App extends Component<Props> {
     timer = () =>{
         const {deviceInfo} = this.state;
 
-      if (this.base64Command){
-          this.manager.writeCharacteristicWithoutResponseForDevice(
-              deviceInfo.deviceID,
-              deviceInfo.serviceUUID,
-              deviceInfo.uuid,
-              this.base64Command)
-              .then((data) => {
-                  console.log("Data Sent Successfully", data.value);
-              })
-              .catch((error) =>{
-                  console.log("ERROR", error);
-              })
+        let fullCommand = '';
+        if(this.leftCommand){
+            if (this.rightCommand){
+                fullCommand = this.leftCommand + this.rightCommand;
+            }
+            else{
+                fullCommand = this.leftCommand + 'XX'
+            }
+        }
+        else if (this.rightCommand){
+            fullCommand = 'XX' + this.rightCommand;
+        }
 
-          this.base64Command = '';
-      }
+        if (fullCommand){
+
+            const base64Command = base64.encode(fullCommand);
+
+            console.log(base64Command);
+
+            this.manager.writeCharacteristicWithoutResponseForDevice(
+                deviceInfo.deviceID,
+                deviceInfo.serviceUUID,
+                deviceInfo.uuid,
+                base64Command)
+                .then((data) => {
+                    console.log("Data Sent Successfully", data.value);
+                })
+                .catch((error) =>{
+                    console.log("ERROR", error);
+                });
+
+            this.leftCommand = '';
+            this.rightCommand = ''
+        }
+
 
     };
 
